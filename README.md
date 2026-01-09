@@ -101,7 +101,33 @@ python -m looted_site_detection.train \
 ```
 Supported: `resnet18`, `resnet34`, `resnet50`, `efficientnet_b0`, `efficientnet_b1` (ImageNet-pretrained by default).
 
-### 4) Inspect and Aggregate Results
+### 4) Evaluation
+
+Traditional (embeddings):
+```bash
+python -m looted_site_detection.evaluate \
+  --model xgb \
+  --feature_type georsclip \
+  --aggregation mean \
+  --year 2023 \
+  --dynamic_split \
+  --fold_index 0 \
+  --normalize \
+  --model_runs_root model_runs_2023 \
+  --save_probs
+```
+
+CNN models:
+```bash
+python evaluate_cnn.py \
+  --checkpoint model_runs_cnn/resnet18/fold_0/best_auroc.pth \
+  --use_best_auroc \
+  --split test \
+  --batch_size 32
+```
+Tip: to customize dataset roots for CNN evaluation, set `CHANGE_DETECTION_DIR` and `LOOTED_METADATA_PATH` environment variables as shown above.
+
+### 5) Inspect and Aggregate Results
 Each run writes `eval_results.json` (accuracy, F1, ROC‑AUC, etc.).
 ```bash
 cat model_runs_cnn/resnet18/fold_0/eval_results.json | jq '.'
