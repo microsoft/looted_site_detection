@@ -1,0 +1,10 @@
+schemaVersion: 0.0.1
+isProduction: false
+accountableOwners:
+  directOwners:
+  - gtadesse@microsoft.com
+  - davrob@microsoft.com
+routing:
+  defaultAreaPath:
+    org: oneCELA
+    path: AI For Good Lab
