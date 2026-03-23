@@ -1,0 +1,62 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.11'
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(pythonVersion)'
+      addToPath: true
+
+  - script: |
+      python -m venv venv
+      source venv/bin/activate
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+      pip install bandit==1.7.6 safety==2.3.5 pip-licenses==4.3.1
+    displayName: 'Setup Python environment'
+
+  - script: |
+      source venv/bin/activate
+      bandit -r . -x venv,looting_env,__pycache__,data,results,huggingface_models -f json -o bandit-report.json || true
+    displayName: 'Run Bandit security scan'
+
+  - script: |
+      source venv/bin/activate
+      safety check --full-report --output text > safety-report.txt || true
+    displayName: 'Run Safety vulnerability check'
+
+  - script: |
+      source venv/bin/activate
+      pip-licenses --from=mixed --format=json --with-license-file --output-file pip-licenses.json || true
+    displayName: 'Generate license report'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: 'bandit-report.json'
+      ArtifactName: 'bandit-report'
+      publishLocation: 'Container'
+    condition: succeededOrFailed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: 'safety-report.txt'
+      ArtifactName: 'safety-report'
+      publishLocation: 'Container'
+    condition: succeededOrFailed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: 'pip-licenses.json'
+      ArtifactName: 'licenses'
+      publishLocation: 'Container'
+    condition: succeededOrFailed()
+
+  # Component Governance integration (configure in Azure DevOps project)
+  # See: https://onecela.visualstudio.com/AI%20For%20Good%20Lab/_componentGovernance
+  # You can enable the CG pipeline extension to automatically scan third-party packages.

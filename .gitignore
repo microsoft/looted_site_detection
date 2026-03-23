@@ -1,0 +1,105 @@
+# Results and model outputs
+looting_env/
+data/
+results/
+model_runs/
+model_runs_cnn/
+model_runs_2023/
+model_runs_2023_without_mask/
+model_runs_2023_OLD_backup_nov17/
+model_runs_cnn_old/
+afghanistan_sites.ipynb
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# Hugging Face cached models
+huggingface_models/
+old_scripts/
+
+# Binary artifacts and datasets
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.bz2
+*.7z
+*.rar
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.onnx
+*.ckpt
+*.pb
+*.pt
+*.pth
+
+# Images/videos (datasets, outputs)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tif
+*.tiff
+*.webp
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Build artifacts
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+.coverage*
+site/
+htmlcov/
+
+# Security/scan outputs
+sbom.json
+component-governance/**
+
+# Allow README example images to be versioned
+!images/
+!images/**/
+!images/**/*.png
