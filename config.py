@@ -21,7 +21,7 @@ else:
     else:
         # Default stays masked to match prior behavior in this repo.
         FEATURE_ROOT = REPO_ROOT / 'looted_site_detection' / 'data' / 'features_with_mask_2023'
-FOLD_DICT_PATH = REPO_ROOT / 'change_detection' / 'datasets' / 'fold_dict.json'
+FOLD_DICT_PATH = Path(__file__).resolve().parent / 'data' / 'datasets' / 'fold_dict.json'
 
 # Months available (2016_01 .. 2023_12)
 MONTHS = [f'{year}_{month}' for year in range(2016, 2024) for month in ['01','02','03','04','05','06','07','08','09','10','11','12']]
