@@ -157,19 +157,30 @@ def resnet20(num_classes=2):
     return ResNet(BasicBlock, [3, 3, 3], num_classes=num_classes)
 
 
+def _build_backbone(builder, weights, arch_name, pretrained):
+    """Instantiate a torchvision backbone; error out if pretrained weights cannot load."""
+    if not pretrained:
+        return builder(weights=None)
+    try:
+        model = builder(weights=weights)
+    except Exception as e:
+        raise RuntimeError(
+            f"[{arch_name}] Could not load ImageNet pretrained weights ({weights}): {e}. "
+            f"Refusing to silently fall back to random initialization (it produces degraded, "
+            f"misleading results). Options: (1) check internet/proxy access, "
+            f"(2) pre-download the weights to TORCH_HOME (default ~/.cache/torch), "
+            f"(3) pass --no_pretrained to train from scratch deliberately."
+        ) from e
+    print(f"[{arch_name}] Loaded ImageNet weights: {weights}")
+    return model
+
+
 def resnet18(pretrained=False, num_classes=2):
     """ResNet18 with optional pretrained weights"""
     if not _TORCHVISION_AVAILABLE:
         raise RuntimeError("torchvision not available; resnet18 disabled")
-    if pretrained:
-        try:
-            weights = models.ResNet18_Weights.IMAGENET1K_V1
-            model = models.resnet18(weights=weights)
-        except Exception:
-            print("Falling back to non-pretrained ResNet18 (weight load failed)")
-            model = models.resnet18()
-    else:
-        model = models.resnet18()
+    model = _build_backbone(models.resnet18, models.ResNet18_Weights.IMAGENET1K_V1,
+                            'resnet18', pretrained)
 
     # Replace final layer for binary classification
     num_ftrs = model.fc.in_features
@@ -182,15 +193,8 @@ def resnet34(pretrained=False, num_classes=2):
     """ResNet34 with optional pretrained weights"""
     if not _TORCHVISION_AVAILABLE:
         raise RuntimeError("torchvision not available; resnet34 disabled")
-    if pretrained:
-        try:
-            weights = models.ResNet34_Weights.IMAGENET1K_V1
-            model = models.resnet34(weights=weights)
-        except Exception:
-            print("Falling back to non-pretrained ResNet34 (weight load failed)")
-            model = models.resnet34()
-    else:
-        model = models.resnet34()
+    model = _build_backbone(models.resnet34, models.ResNet34_Weights.IMAGENET1K_V1,
+                            'resnet34', pretrained)
 
     # Replace final layer for binary classification
     num_ftrs = model.fc.in_features
@@ -203,12 +207,8 @@ def resnet50(pretrained=False, num_classes=2):
     """ResNet50 with optional pretrained weights"""
     if not _TORCHVISION_AVAILABLE:
         raise RuntimeError("torchvision not available; resnet50 disabled")
-    # Use legacy API; if fails fallback
-    try:
-        model = models.resnet50(pretrained=pretrained)
-    except Exception:
-        print("Falling back to non-pretrained ResNet50 (weight load failed)")
-        model = models.resnet50(pretrained=False)
+    model = _build_backbone(models.resnet50, models.ResNet50_Weights.IMAGENET1K_V1,
+                            'resnet50', pretrained)
 
     # Replace final layer for binary classification
     num_ftrs = model.fc.in_features
@@ -221,11 +221,8 @@ def efficientnet_b0(pretrained=False, num_classes=2):
     """EfficientNet-B0 with optional pretrained weights"""
     if not _TORCHVISION_AVAILABLE:
         raise RuntimeError("torchvision not available; efficientnet_b0 disabled")
-    try:
-        model = models.efficientnet_b0(pretrained=pretrained)
-    except Exception:
-        print("Falling back to non-pretrained EfficientNet-B0 (weight load failed)")
-        model = models.efficientnet_b0(pretrained=False)
+    model = _build_backbone(models.efficientnet_b0, models.EfficientNet_B0_Weights.IMAGENET1K_V1,
+                            'efficientnet_b0', pretrained)
 
     # Replace final layer for binary classification
     num_ftrs = model.classifier[1].in_features
@@ -238,11 +235,8 @@ def efficientnet_b1(pretrained=False, num_classes=2):
     """EfficientNet-B1 with optional pretrained weights"""
     if not _TORCHVISION_AVAILABLE:
         raise RuntimeError("torchvision not available; efficientnet_b1 disabled")
-    try:
-        model = models.efficientnet_b1(pretrained=pretrained)
-    except Exception:
-        print("Falling back to non-pretrained EfficientNet-B1 (weight load failed)")
-        model = models.efficientnet_b1(pretrained=False)
+    model = _build_backbone(models.efficientnet_b1, models.EfficientNet_B1_Weights.IMAGENET1K_V1,
+                            'efficientnet_b1', pretrained)
 
     # Replace final layer for binary classification
     num_ftrs = model.classifier[1].in_features
