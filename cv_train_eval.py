@@ -48,15 +48,23 @@ def main():
     args = parse_args()
     rng = np.random.default_rng(args.seed)
     full_df = load_features(args.feature_type)
-    full_df['site_id'] = full_df['site_name'].apply(lambda s: int(s.split('_')[-1]) if '_' in s else -1)
     fold_dict = load_fold_dict()
-    test_ids = set(fold_dict['test'])
-    cv_pool_ids = set(fold_dict['train'])
-    for k in range(1,6):
-        cv_pool_ids.update(fold_dict.get(f'val_{k}', []))
-    cv_pool_ids = cv_pool_ids - test_ids
-    cv_df = full_df[full_df['site_id'].isin(cv_pool_ids)].copy()
-    test_df = full_df[full_df['site_id'].isin(test_ids)].copy()
+
+    # fold_dict entries are {'looted': [ids], 'preserved': [ids]}; the looted and preserved
+    # integer id spaces overlap, so sites must be matched by full name, not bare int.
+    def fold_site_names(entry):
+        return ({f'looted_{i}' for i in entry['looted']}
+                | {f'preserved_{i}' for i in entry['preserved']})
+
+    test_names = fold_site_names(fold_dict['test'])
+    cv_pool_names = fold_site_names(fold_dict['train'])
+    for k in range(1, 6):
+        vk = fold_dict.get(f'val_{k}')
+        if vk:
+            cv_pool_names |= fold_site_names(vk)
+    cv_pool_names = cv_pool_names - test_names
+    cv_df = full_df[full_df['site_name'].isin(cv_pool_names)].copy()
+    test_df = full_df[full_df['site_name'].isin(test_names)].copy()
     if args.subset:
         site_names_all = sorted(cv_df['site_name'].unique())
         if args.subset < len(site_names_all):
