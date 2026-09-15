@@ -162,6 +162,22 @@ python -m looted_site_detection.train \
 Common: `--model {rf,xgb,logreg,gb}`, `--feature_type {handcrafted,georsclip,satclip,satmae,satlaspretrain,...}`, `--aggregation {mean,concat}`.
 
 ### 3) Train Image-Based CNNs
+
+Static 5-fold split (uses `data/datasets/fold_dict.json`; pick the fold with `--fold 1..5`):
+```bash
+python -m looted_site_detection.train \
+  --model resnet18 \
+  --year 2023 \
+  --epochs 50 \
+  --batch_size 16 \
+  --lr 3e-4 \
+  --mask_mode multiply \
+  --model_runs_root model_runs_cnn \
+  --fold 1
+```
+Outputs land in `<model_runs_root>/<model>/static_fold_<fold>/` (`model.pt`, `splits.json`, `eval_results.json`).
+
+Dynamic stratified split (writes to `<model_runs_root>/<model>/fold_<fold_index>/`):
 ```bash
 python -m looted_site_detection.train \
   --model resnet18 \
@@ -174,6 +190,8 @@ python -m looted_site_detection.train \
   --model_runs_root model_runs_cnn
 ```
 Supported: `resnet18`, `resnet34`, `resnet50`, `efficientnet_b0`, `efficientnet_b1` (ImageNet-pretrained by default).
+
+The ImageNet weights download from torchvision on first use. If the download fails (offline machine, blocked proxy), training stops with an error instead of silently starting from random initialization. Either pre-download the weights to `TORCH_HOME` (default `~/.cache/torch`) or pass `--no_pretrained` to train from scratch on purpose. CPU-only machines work; training is just slower. `--seed <int>` makes runs repeatable.
 
 ### 4) Evaluation
 
