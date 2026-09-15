@@ -95,6 +95,8 @@ def parse_args():
     p.add_argument('--test_size', type=float, default=0.2, help='Test fraction.')
     p.add_argument('--val_size', type=float, default=0.1, help='Validation fraction.')
     p.add_argument('--fold_index', type=int, default=0, help='Random seed offset.')
+    p.add_argument('--seed', type=int, default=None,
+                   help='Optional global random seed for torch/numpy (default: unseeded).')
     p.add_argument('--model_runs_root', type=str, default='looted_site_detection/model_runs', 
                    help='Root directory for outputs.')
     
@@ -145,7 +147,19 @@ def train_cnn_model(args, site_ids_dict, out_dir):
         test_use_buffered_masks=args.test_use_buffered_masks,
         enforce_test_min_area=args.enforce_test_min_area,
     )
-    
+
+    # ImageDataset silently drops site ids whose directory is missing; surface that here
+    for split_name, ds in (('train', train_ds), ('val', val_ds), ('test', test_ds)):
+        expected = site_ids_dict[split_name]
+        if len(ds) != len(expected):
+            missing = sorted(set(expected) - set(ds.valid_sites))
+            preview = ', '.join(missing[:10])
+            raise ValueError(
+                f"{split_name} split: {len(missing)} of {len(expected)} site directories missing "
+                f"under {args.data_root} (first missing: {preview}). "
+                f"Check that --data_root points to the complete dataset."
+            )
+
     # Create data loaders
     # DataLoader resource configuration
     dl_workers = max(0, args.num_workers)
@@ -390,6 +404,12 @@ def train_feature_model(args, site_ids_dict, out_dir):
 def main():
     args = parse_args()
 
+    if args.seed is not None:
+        np.random.seed(args.seed)
+        if TORCH_AVAILABLE:
+            torch.manual_seed(args.seed)
+        print(f"[seed] Global random seed set to {args.seed}")
+
     # --- Robust data_root resolution for CNN workflows ---
     # When launching from parent directory or different working directories, the intended
     # dataset path may actually live under "looted_site_detection/datasets" rather than a
@@ -495,9 +515,52 @@ def main():
             json.dump(site_ids_dict, f, indent=2)
         out_dir = run_dir
     else:
-        site_ids_dict = None
-        out_dir = Path(args.output_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
+        if use_cnn:
+            # Static legacy 5-fold split from fold_dict.json (shipped with the dataset)
+            try:
+                from .splits import load_fold_dict, get_site_ids
+                from .config import FOLD_DICT_PATH
+            except ImportError:
+                from looted_site_detection.splits import load_fold_dict, get_site_ids
+                from looted_site_detection.config import FOLD_DICT_PATH
+
+            if not 1 <= args.fold <= 5:
+                raise ValueError(f"--fold must be between 1 and 5 for static splits, got {args.fold}")
+            if args.fold_index != 0:
+                print(f"[static_split] Warning: --fold_index {args.fold_index} has no effect without "
+                      f"--dynamic_split; static runs select the fold with --fold (using fold {args.fold}).")
+
+            candidates = [Path(args.data_root) / 'fold_dict.json', Path(FOLD_DICT_PATH)]
+            fold_dict_path = next((c for c in candidates if c.exists()), None)
+            if fold_dict_path is None:
+                tried = ', '.join(str(c) for c in candidates)
+                raise FileNotFoundError(
+                    f"fold_dict.json not found (tried: {tried}). Static CNN training needs "
+                    f"the fold definition shipped with the dataset; alternatively pass --dynamic_split."
+                )
+
+            fold_dict = load_fold_dict(fold_dict_path)
+            site_ids_dict = {}
+            for split_name in ('train', 'val', 'test'):
+                looted_ids, preserved_ids = get_site_ids(split_name, args.fold, fold_dict)
+                site_ids_dict[split_name] = (
+                    [f'looted_{i}' for i in looted_ids]
+                    + [f'preserved_{i}' for i in preserved_ids]
+                )
+            print(f"[static_split] fold_dict: {fold_dict_path} | fold {args.fold} | "
+                  f"train={len(site_ids_dict['train'])}, val={len(site_ids_dict['val'])}, "
+                  f"test={len(site_ids_dict['test'])}")
+
+            base_root = Path(args.model_runs_root) if args.model_runs_root else Path('results/model_runs_cnn')
+            run_dir = (base_root / f'static_fold_{args.fold}') if args.flat_runs_root else (base_root / args.model / f'static_fold_{args.fold}')
+            run_dir.mkdir(parents=True, exist_ok=True)
+            with open(run_dir / 'splits.json', 'w') as f:
+                json.dump(site_ids_dict, f, indent=2)
+            out_dir = run_dir
+        else:
+            site_ids_dict = None
+            out_dir = Path(args.output_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
 
     # Train model (CNN or feature-based)
     if use_cnn:

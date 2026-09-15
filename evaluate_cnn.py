@@ -159,7 +159,7 @@ def main():
     if not splits_path.exists():
         raise FileNotFoundError(
             f'splits.json not found at {splits_path}. '
-            'This file is written by train.py when using --dynamic_split.'
+            'train.py writes this file for both dynamic (--dynamic_split) and static fold runs.'
         )
     with open(splits_path) as f:
         site_ids_dict = json.load(f)
